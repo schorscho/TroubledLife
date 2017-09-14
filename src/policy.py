@@ -27,6 +27,8 @@ class Policy:
         self.version += 1
 
     def add_yearly_interest(self):
+        random.seed()
+
         if (random.random() < 0.05):
             self.current_capital += self.current_capital * self.interest * random.uniform(5.0, 10.0)
             self.troubled = True

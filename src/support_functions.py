@@ -7,18 +7,9 @@ import pandas as pd
 
 from src.policy import Policy
 
-PROJECT_ROOT_DIR = "/Users/gopora/MyStuff/Dev/Workspaces/Sandbox/TroubledLife"
-DATASETS_DIR = os.path.join(PROJECT_ROOT_DIR, "data")
-TRAINING_SET_DATA = "troubled_life_policy_data.csv"
 
-
-def generate_very_simple_portfolio_history(no_of_policies, runtime):
-    outfile_name = os.path.join(DATASETS_DIR, TRAINING_SET_DATA)
-
-    if not os.path.isdir(DATASETS_DIR):
-        os.makedirs(DATASETS_DIR)
-
-    with open(outfile_name, 'w') as csvfile:
+def generate_very_simple_troubled_life_policy_data(no_of_policies, runtime, file_path):
+    with open(file_path, 'w') as csvfile:
         policies = [Policy(id, 100000) for id in range(1001, 1001 + no_of_policies)]
 
         Policy.write_header_to_csv(csvfile)
@@ -35,8 +26,8 @@ def generate_very_simple_portfolio_history(no_of_policies, runtime):
                 policy.add_yearly_interest()
                 policy.write_to_csv(csvfile)
 
-def generate_portfolio_history(no_of_policies, runtime):
-    random.seed(42)
+def generate_troubled_life_policy_data(no_of_policies, runtime):
+    random.seed()
 
     outfile_name = os.path.join(DATASETS_DIR, TRAINING_SET_DATA)
 
@@ -64,12 +55,14 @@ def generate_portfolio_history(no_of_policies, runtime):
                 policy.add_yearly_interest()
                 policy.write_to_csv(csvfile)
 
-def load_troubled_life_policy_data():
-    return pd.read_csv(filepath_or_buffer=os.path.join(DATASETS_DIR, TRAINING_SET_DATA), header=0, index_col=[0, 1, 2])
 
-def prepare_troubled_life_policy_data(policy_histories):
-    policy_histories["troubled"].replace(to_replace=[False, True], value=[0, 1], inplace=True)
+def load_troubled_life_policy_data(file_path):
+    policy_histories = pd.read_csv(filepath_or_buffer=file_path, header=0, index_col=[0, 1, 2])
 
+    return policy_histories.sort_index()
+
+
+def pad_troubled_life_policy_histories(policy_histories):
     # Collect the lenght of each policy's history
     history_lengths = np.array([(id, policy_histories.loc[id].shape[0]) for id in policy_histories.index.levels[0]])
     max_history_length = history_lengths.max(axis=0)[1]
