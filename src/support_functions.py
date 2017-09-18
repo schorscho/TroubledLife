@@ -1,5 +1,4 @@
 # Common imports
-import os
 import random
 
 import numpy as np
@@ -22,9 +21,9 @@ def generate_troubled_life_policy_data(no_of_policies, runtime, file_path):
                 policy.collect_premium(year)
                 policy.write_to_csv(csvfile)
 
-            #for policy in random.sample(policies, no_of_policies // 10):
-            #    policy.adapt_premium(random.uniform(0.2, 0.3))
-            #    policy.write_to_csv(csvfile)
+            for policy in random.sample(policies, no_of_policies // 10):
+                policy.adapt_premium(random.uniform(0.2, 0.3))
+                policy.write_to_csv(csvfile)
 
             for policy in policies:
                 policy.add_yearly_interest()
@@ -51,7 +50,7 @@ def pad_troubled_life_policy_histories(policy_histories, policy_histories_length
         # Append at the end, set id to current group and current_year to 10000+
         # such that sorting will definitely move all padded rows to the end of the group
         for i in range(max_policy_history_length - policy_history_length):
-            policy_histories.loc[id, 10000 + i, 0] = [0, 0, False]
+            policy_histories.loc[id, 10000 + i, 0] = ["pad", 0, 0, False]
 
     return policy_histories.sort_index()
 
