@@ -64,7 +64,8 @@ def prepare_labels_features_lengths(policy_histories, policy_histories_lengths, 
     seq_lengths = policy_histories_lengths[:, 1]
 
     # Reshape labels from (overall_no_of_histories) to (overall_no_of_policies, maximum_history_length) and take maximum of each row (0 or 1)
-    labels = labels.reshape(policy_histories.index.levels[0].shape[0], -1).max(axis=1)
+#    labels = labels.reshape(policy_histories.index.levels[0].shape[0], -1).max(axis=1)
+    labels = labels.reshape(policy_histories.index.levels[0].shape[0], -1).argmax(axis=1)
 
     # Reshape features from (overall_no_of_histories, 2) to (overall_no_of_policies, maximum_history_length, 2)
     features = features.reshape((policy_histories.index.levels[0].shape[0], max_policy_history_length, -1))

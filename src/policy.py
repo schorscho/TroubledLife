@@ -16,18 +16,23 @@ class Policy:
         self.troubled = False
         self.biz_proc = "initial"
 
+
     def collect_premium(self, year):
         self.current_capital += self.premium
 
         self.current_year = year
         self.version = 1
         self.biz_proc = "collect_premium"
+        self.troubled = False
+
 
     def adapt_premium(self, premium_change):
         self.premium += premium_change * self.premium
 
         self.version += 1
         self.biz_proc = "adapt_premium"
+        self.troubled = False
+
 
     def add_yearly_interest(self):
         random.seed()
@@ -37,9 +42,11 @@ class Policy:
             self.troubled = True
         else:
             self.current_capital += self.current_capital * self.interest
+            self.troubled = False
 
         self.version += 1
         self.biz_proc = "add_yearly_interest"
+
 
     def write_to_csv(self, file):
         txt = '%i,%i,%i,%s,%.6f,%.6f,%r\n' % (self.id, self.current_year, self.version, self.biz_proc, self.premium, self.current_capital, self.troubled)
