@@ -4,11 +4,13 @@ class Policy:
 
     @staticmethod
     def write_header_to_csv(file):
-        file.write('id,current_year,version,biz_proc,premium,current_capital,troubled\n')
+        file.write('id,current_year,version,biz_proc,tariff,interest,sum_insured,premium,current_capital,troubled\n')
 
-    def __init__(self, id, sum_insured):
+    def __init__(self, id, sum_insured, tariff):
         self.id = id
-        self.interest = 0.04
+        self.sum_insured = sum_insured
+        self.tariff = tariff
+        self.interest = 0.02 + tariff * 0.01
         self.premium = sum_insured / 100
         self.current_capital = 0.0
         self.current_year = 0
@@ -49,6 +51,8 @@ class Policy:
 
 
     def write_to_csv(self, file):
-        txt = '%i,%i,%i,%s,%.6f,%.6f,%r\n' % (self.id, self.current_year, self.version, self.biz_proc, self.premium, self.current_capital, self.troubled)
+        txt = '%i,%i,%i,%s,%i,%6f,%6f,%.6f,%.6f,%r\n' % \
+              (self.id, self.current_year, self.version, self.biz_proc, self.tariff, self.interest, self.sum_insured,
+               self.premium, self.current_capital, self.troubled)
 
         file.write(txt)

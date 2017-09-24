@@ -9,7 +9,7 @@ from src.policy import Policy
 
 def generate_troubled_life_policy_data(no_of_policies, runtime, file_path):
     with open(file_path, 'w') as csvfile:
-        policies = [Policy(id, 100000 * random.uniform(1.0, 1.5)) for id in range(1001, 1001 + no_of_policies)]
+        policies = [Policy(id, 100000 * random.uniform(1.0, 1.5), random.randint(1, 4)) for id in range(1001, 1001 + no_of_policies)]
 
         Policy.write_header_to_csv(csvfile)
 
@@ -51,7 +51,7 @@ def pad_troubled_life_policy_histories(policy_histories, policy_histories_length
         # Append at the end, set id to current group and current_year to 10000+
         # such that sorting will definitely move all padded rows to the end of the group
         for i in range(max_policy_history_length - policy_history_length):
-            policy_histories.loc[id, 10000 + i, 0] = ["pad", 0, 0, False]
+            policy_histories.loc[id, 10000 + i, 0] = ["pad", 0, 0, 0, 0, 0, False]
 
         print("pad: ", id)
 
