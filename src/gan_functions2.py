@@ -22,13 +22,12 @@ def generator(z, n_outputs):
     return logits
 
 
-def generator_loss(logits, batch_size, n_outputs):
-    helper = np.ones((batch_size, n_outputs))
-    helper[:, 0] = 1
+def generator_loss(batch_size, logits):
+    # discriminator should ideally fall for the fakes, so the discriminator's logits should flag 0
+    labels = tf.zeros(batch_size, tf.int32)
 
-    ideal_logits = tf.constant(helper, name='ideal_logits', dtype=tf.float32)
-
-    loss = tf.reduce_mean(tf.nn.sigmoid_cross_entropy_with_logits(logits=logits, labels=ideal_logits))
+    loss = tf.nn.sparse_softmax_cross_entropy_with_logits(labels=labels, logits=logits)
+    loss = tf.reduce_mean(loss)
 
     #low = tf.zeros_like(logits) + 100000.0
     #high = low + 50000.0
@@ -68,13 +67,20 @@ def discriminator(X, n_outputs, reuse=False):
     return logits, y_pred
 
 
-def discriminator_loss(logits, y):
-    xentropy = tf.nn.sparse_softmax_cross_entropy_with_logits(labels=y, logits=logits)
+def discriminator_losses(batch_size, logits_for_X, y_pred_X, logits_for_g):
+    #d_loss_real = tf.reduce_mean(tf.nn.sigmoid_cross_entropy_with_logits(Dx, tf.ones_like(Dx)))
+    #d_loss_fake = tf.reduce_mean(tf.nn.sigmoid_cross_entropy_with_logits(Dg, tf.zeros_like(Dg)))
 
-    # Loss function and Adam Optimizer
-    loss = tf.reduce_mean(tf.cast(xentropy, tf.float32))
+    loss_real = tf.nn.sparse_softmax_cross_entropy_with_logits(labels=y_pred_X, logits=logits_for_X)
 
-    return loss
+    # discriminator should ideally not fall for the fakes, so the discriminator's logits should flag 1 (for now)
+    labels_for_g = tf.ones(batch_size, tf.int32)
+    loss_fake = tf.nn.sparse_softmax_cross_entropy_with_logits(labels=labels_for_g, logits=logits_for_g)
+
+    loss_real = tf.reduce_mean(tf.cast(loss_real, tf.float32))
+    loss_fake = tf.reduce_mean(tf.cast(loss_fake, tf.float32))
+
+    return loss_real, loss_fake
 
 
 def discriminator_trainer(learning_rate, loss):
@@ -94,20 +100,36 @@ d_n_inputs = 2
 tf.reset_default_graph()
 tf.set_random_seed(42)
 
+noise = tf.placeholder(tf.float32, [None, max_policy_history_length, z_dimensions], name='noise')
 seq_length = tf.placeholder(tf.int32, [None], name="seq_length")
-z_placeholder = tf.placeholder(tf.float32, [None, max_policy_history_length, z_dimensions], name='z_placeholder')
-X_placeholder = tf.placeholder(tf.float32, [None, max_policy_history_length, d_n_inputs], name="X_placeholder")
+X = tf.placeholder(tf.float32, [None, max_policy_history_length, d_n_inputs], name="X")
+y = tf.placeholder(tf.int32, [None], name="y")
 
-g_data = generator(z_placeholder, n_outputs=g_n_outputs)
 
-y_pred_X = discriminator(X_placeholder, max_policy_history_length)
-logits_g, _ = discriminator(g_data, max_policy_history_length, reuse=True)
+g_data = generator(noise, n_outputs=g_n_outputs)
 
-g_loss = generator_loss(logits_g, batch_size, max_policy_history_length)
+logits_d_for_X, y_pred_X = discriminator(X, max_policy_history_length)
+logits_d_for_g, y_pred_g = discriminator(g_data, max_policy_history_length, reuse=True)
+
+g_loss = generator_loss(batch_size=batch_size, logits=logits_d_for_g)
+g_loss = discriminator_losses(batch_size=batch_size, logits_for_X=logits_d_for_g, y_pred_X=y,logits_for_g=logits_d_for_g)
+
+vars = tf.trainable_variables()
+
+d_vars = [var for var in tvars if 'd_' in var.name]
+g_vars = [var for var in tvars if 'g_' in var.name]
+
+print([v.name for v in d_vars])
+print([v.name for v in g_vars])
+
 g_trainer = generator_trainer(g_learning_rate, g_loss)
+d_trainer_real = discriminator_trainer(d_real_learning_rate, d_loss_fake)
+d_trainer_fake = discriminator_trainer(d_fake_learning_rate, d_loss_real)
 
-#d_loss_real = tf.reduce_mean(tf.nn.sigmoid_cross_entropy_with_logits(Dx, tf.ones_like(Dx)))
-#d_loss_fake = tf.reduce_mean(tf.nn.sigmoid_cross_entropy_with_logits(Dg, tf.zeros_like(Dg)))
+d_trainer_fake = tf.train.AdamOptimizer(0.0003).minimize(d_loss_fake, var_list=d_vars)
+d_trainer_real = tf.train.AdamOptimizer(0.0003).minimize(d_loss_real, var_list=d_vars)
+
+
 
 sess = tf.Session()
 sess.run(tf.global_variables_initializer())
