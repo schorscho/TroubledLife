@@ -31,6 +31,7 @@ def generate_troubled_life_policy_data(no_of_policies, runtime, file_path):
 
             print("generate: ", year)
 
+
 def load_troubled_life_policy_data(file_path):
     policy_histories = pd.read_csv(filepath_or_buffer=file_path, header=0, index_col=[0, 1, 2])
 
@@ -67,13 +68,13 @@ def prepare_labels_features_lengths(policy_histories, policy_histories_lengths, 
     seq_lengths = policy_histories_lengths[:, 1]
 
     # Reshape labels from (overall_no_of_histories) to (overall_no_of_policies, maximum_history_length) and take maximum of each row (0 or 1)
-#    labels = labels.reshape(policy_histories.index.levels[0].shape[0], -1).max(axis=1)
     labels = labels.reshape(policy_histories.index.levels[0].shape[0], -1).argmax(axis=1)
 
     # Reshape features from (overall_no_of_histories, 2) to (overall_no_of_policies, maximum_history_length, 2)
     features = features.reshape((policy_histories.index.levels[0].shape[0], max_policy_history_length, -1))
 
     return labels, features, seq_lengths
+
 
 class TrainDataSet:
     def __init__(self, train_labels, train_features, train_seq_lengths):
