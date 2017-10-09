@@ -59,7 +59,7 @@ def pad_troubled_life_policy_histories(policy_histories, policy_histories_length
     return policy_histories.sort_index()
 
 
-def prepare_labels_features_lengths(policy_histories, policy_histories_lengths, max_policy_history_length):
+def prepare_labels_features_lengths(policy_histories, policy_histories_lengths, max_policy_history_length, binary_classification=False):
     # Extract features and labels from dataset as numpy.ndarray(s)
     features = policy_histories[['premium', 'current_capital']].as_matrix()
     labels = policy_histories['troubled'].replace(to_replace=[False, True], value=[0, 1]).as_matrix()
@@ -69,6 +69,9 @@ def prepare_labels_features_lengths(policy_histories, policy_histories_lengths, 
 
     # Reshape labels from (overall_no_of_histories) to (overall_no_of_policies, maximum_history_length) and take maximum of each row (0 or 1)
     labels = labels.reshape(policy_histories.index.levels[0].shape[0], -1).argmax(axis=1)
+
+    if (binary_classification):
+        labels = (labels > 0).astype(int)
 
     # Reshape features from (overall_no_of_histories, 2) to (overall_no_of_policies, maximum_history_length, 2)
     features = features.reshape((policy_histories.index.levels[0].shape[0], max_policy_history_length, -1))

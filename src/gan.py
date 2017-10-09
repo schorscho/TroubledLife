@@ -19,12 +19,12 @@ def generator(noise, n_outputs, seq_length):
 
 def generator_loss(batch_size, logits):
     # discriminator should ideally fall for the fakes, so the discriminator's logits should flag 0
-    labels = tf.zeros(batch_size, tf.int32)
+    zeros = tf.zeros(batch_size, tf.int32)
 
-    loss = tf.nn.sparse_softmax_cross_entropy_with_logits(labels=labels, logits=logits)
+    loss = tf.nn.sparse_softmax_cross_entropy_with_logits(labels=zeros, logits=logits)
     loss = tf.reduce_mean(loss)
 
-    accuracy = tf.reduce_mean(tf.cast(tf.nn.in_top_k(logits, labels, 1), tf.float32))
+    accuracy = tf.reduce_mean(tf.cast(tf.nn.in_top_k(logits, zeros, 1), tf.float32))
 
     #low = tf.zeros_like(logits) + 100000.0
     #high = low + 50000.0
@@ -68,7 +68,7 @@ def discriminator(X, n_outputs, seq_length, reuse=False):
     return logits, y_pred
 
 
-def discriminator_loss_real(batch_size, logits, y):
+def discriminator_loss_real(logits, y):
     loss = tf.nn.sparse_softmax_cross_entropy_with_logits(labels=y, logits=logits)
 
     loss = tf.reduce_mean(tf.cast(loss, tf.float32))
@@ -79,14 +79,15 @@ def discriminator_loss_real(batch_size, logits, y):
 
 
 def discriminator_loss_fake(batch_size, logits):
-    # discriminator should ideally not fall for the fakes, so the discriminator's logits should flag 1 (for now)
-    labels = tf.ones(batch_size, tf.int32)
+    # discriminator should ideally not fall for the fakes
 
-    loss = tf.nn.sparse_softmax_cross_entropy_with_logits(labels=labels, logits=logits)
+    ones = tf.ones(batch_size, tf.int64)
+
+    loss = tf.nn.sparse_softmax_cross_entropy_with_logits(labels=ones, logits=logits)
 
     loss = tf.reduce_mean(tf.cast(loss, tf.float32))
 
-    accuracy = tf.reduce_mean(tf.cast(tf.nn.in_top_k(logits, labels, 1), tf.float32))
+    accuracy = tf.reduce_mean(tf.cast(tf.nn.in_top_k(logits, ones, 1), tf.float32))
 
     return loss, accuracy
 
