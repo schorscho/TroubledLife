@@ -1,7 +1,8 @@
 import tensorflow as tf
+import numpy as np
 
 
-def generator(noise, n_outputs, seq_length):
+def generator(noise, batch_size, n_outputs, max_seq_length, seq_length):
     n_layers = 3
     n_neurons = 200
 
@@ -13,24 +14,22 @@ def generator(noise, n_outputs, seq_length):
         outputs, states = tf.nn.dynamic_rnn(cell=multi_layer_cell, inputs=noise, sequence_length=seq_length, dtype=tf.float32)
 
         logits = tf.layers.dense(outputs, n_outputs)
-
     return logits
 
 
-def generator_loss(batch_size, logits):
+def generator_loss(batch_size, logits_d, logits_g):
     # discriminator should ideally fall for the fakes, so the discriminator's logits should flag 0
     zeros = tf.zeros(batch_size, tf.int32)
 
-    loss = tf.nn.sparse_softmax_cross_entropy_with_logits(labels=zeros, logits=logits)
+    loss = tf.nn.sparse_softmax_cross_entropy_with_logits(labels=zeros, logits=logits_d)
     loss = tf.reduce_mean(loss)
 
-    accuracy = tf.reduce_mean(tf.cast(tf.nn.in_top_k(logits, zeros, 1), tf.float32))
+    accuracy = tf.reduce_mean(tf.cast(tf.nn.in_top_k(logits_d, zeros, 1), tf.float32))
 
-    #low = tf.zeros_like(logits) + 100000.0
-    #high = low + 50000.0
+    min_prem = tf.constant(value=np.full(shape=batch_size, fill_value=1000.0), dtype=tf.float32)
+    max_prem = min_prem * 1.5
 
-    #g_loss = tf.cast(tf.less(policies, low), tf.float32)# + tf.greater(policies, high)
-    #loss = tf.reduce_mean(tf.abs(logits[:, 0, 0] - 100000.0))
+    loss = tf.reduce_mean(tf.abs(2 * logits_g[:, 0, 0] - min_prem - max_prem) + tf.abs(logits_g[:, 0, 1]))
 
     return loss, accuracy
 
@@ -54,8 +53,7 @@ def discriminator(X, n_outputs, seq_length, reuse=False):
             tf.get_variable_scope().reuse_variables()
 
         layers = [tf.contrib.rnn.BasicRNNCell(num_units=n_neurons,
-                                              activation=tf.nn.relu,
-                                              reuse=reuse)
+                                              activation=tf.nn.relu)
                   for layer in range(n_layers)]
         multi_layer_cell = tf.contrib.rnn.MultiRNNCell(layers, state_is_tuple=False)
         outputs, states = tf.nn.dynamic_rnn(cell=multi_layer_cell, inputs=X, sequence_length=seq_length, dtype=tf.float32)
@@ -110,23 +108,6 @@ def discriminator_trainer_fake(learning_rate, loss):
     trainer = tf.train.AdamOptimizer(learning_rate).minimize(loss, var_list=vars)
 
     return trainer
-
-
-
-        # for i in range(100000):
-#     # Train generator
-#     noise_batch = np.random.normal(0, 1, size=[batch_size, max_policy_history_length, z_dimensions])
-#
-#     _ = sess.run(g_trainer, feed_dict={noise: noise_batch})
-#
-#     if i % 100 == 0:
-#         # Every 100 iterations, show a generated image
-#         print("Iteration:", i, "at", datetime.datetime.now())
-#         noise_batch = np.random.normal(0, 1, size=[1, max_policy_history_length, z_dimensions])
-#         policy = sess.run(g_data, {noise: noise_batch})
-#
-#         print("Policy:", policy[:, 0, 0], policy[:, 0, 0].shape)
-#
 
 
 # Train generator and discriminator together
