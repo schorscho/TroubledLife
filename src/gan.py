@@ -4,7 +4,7 @@ import numpy as np
 
 def generator(noise, batch_size, n_outputs, max_seq_length, seq_length):
     n_layers = 3
-    n_neurons = 200
+    n_neurons = 300
 
     with tf.variable_scope("t_generator"):
         layers = [tf.contrib.rnn.BasicRNNCell(num_units=n_neurons,
@@ -17,7 +17,7 @@ def generator(noise, batch_size, n_outputs, max_seq_length, seq_length):
     return logits
 
 
-def generator_loss(batch_size, logits_d, logits_g):
+def generator_loss(batch_size, logits_d):
     # discriminator should ideally fall for the fakes, so the discriminator's logits should flag 0
     zeros = tf.zeros(batch_size, tf.int32)
 
@@ -25,11 +25,6 @@ def generator_loss(batch_size, logits_d, logits_g):
     loss = tf.reduce_mean(loss)
 
     accuracy = tf.reduce_mean(tf.cast(tf.nn.in_top_k(logits_d, zeros, 1), tf.float32))
-
-    min_prem = tf.constant(value=np.full(shape=batch_size, fill_value=1000.0), dtype=tf.float32)
-    max_prem = min_prem * 1.5
-
-    loss = tf.reduce_mean(tf.abs(2 * logits_g[:, 0, 0] - min_prem - max_prem) + tf.abs(logits_g[:, 0, 1]))
 
     return loss, accuracy
 
