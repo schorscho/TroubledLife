@@ -1,30 +1,51 @@
 import tensorflow as tf
-import numpy as np
+
+from tensorflow.python.framework import ops
+from tensorflow.python.ops import math_ops
 
 
-def generator(noise, batch_size, n_outputs, max_seq_length, seq_length):
+def leaky_relu(features, alpha=0.2, name=None):
+    """Compute the Leaky ReLU activation function.
+    "Rectifier Nonlinearities Improve Neural Network Acoustic Models"
+    AL Maas, AY Hannun, AY Ng - Proc. ICML, 2013
+    http://web.stanford.edu/~awni/papers/relu_hybrid_icml2013_final.pdf
+    Args:
+    features: A `Tensor` representing preactivation values.
+    alpha: Slope of the activation function at x < 0.
+    name: A name for the operation (optional).
+    Returns:
+    The activation value.
+    """
+    with ops.name_scope(name, "LeakyRelu", [features, alpha]):
+        features = ops.convert_to_tensor(features, name="features")
+        alpha = ops.convert_to_tensor(alpha, name="alpha")
+        return math_ops.maximum(alpha * features, features)
+
+
+def generator(Z, n_outputs, seq_length, leaky):
     n_layers = 3
     n_neurons = 300
 
     with tf.variable_scope("t_generator"):
         layers = [tf.contrib.rnn.BasicRNNCell(num_units=n_neurons,
-                                              activation=tf.nn.relu)
+                                              activation=leaky_relu if leaky else tf.nn.relu)
                   for layer in range(n_layers)]
         multi_layer_cell = tf.contrib.rnn.MultiRNNCell(layers, state_is_tuple=False)
-        outputs, states = tf.nn.dynamic_rnn(cell=multi_layer_cell, inputs=noise, sequence_length=seq_length, dtype=tf.float32)
+        outputs, states = tf.nn.dynamic_rnn(cell=multi_layer_cell, inputs=Z, sequence_length=seq_length, dtype=tf.float32)
 
         logits = tf.layers.dense(outputs, n_outputs)
+
     return logits
 
 
-def generator_loss(batch_size, logits_d):
+def generator_loss(size_batch, Dg):
     # discriminator should ideally fall for the fakes, so the discriminator's logits should flag 0
-    zeros = tf.zeros(batch_size, tf.int32)
+    zeros = tf.zeros(size_batch, tf.int32)
 
-    loss = tf.nn.sparse_softmax_cross_entropy_with_logits(labels=zeros, logits=logits_d)
+    loss = tf.nn.sparse_softmax_cross_entropy_with_logits(labels=zeros, logits=Dg)
     loss = tf.reduce_mean(loss)
 
-    accuracy = tf.reduce_mean(tf.cast(tf.nn.in_top_k(logits_d, zeros, 1), tf.float32))
+    accuracy = tf.reduce_mean(tf.cast(tf.nn.in_top_k(Dg, zeros, 1), tf.float32))
 
     return loss, accuracy
 
@@ -39,7 +60,7 @@ def generator_trainer(learning_rate, loss):
     return trainer
 
 
-def discriminator(X, n_outputs, seq_length, reuse=False):
+def discriminator(X, seq_length, n_outputs, leaky, reuse=False):
     n_layers = 3
     n_neurons = 200
 
@@ -47,8 +68,9 @@ def discriminator(X, n_outputs, seq_length, reuse=False):
         if (reuse):
             tf.get_variable_scope().reuse_variables()
 
+
         layers = [tf.contrib.rnn.BasicRNNCell(num_units=n_neurons,
-                                              activation=tf.nn.relu)
+                                              activation=leaky_relu if leaky else tf.nn.relu)
                   for layer in range(n_layers)]
         multi_layer_cell = tf.contrib.rnn.MultiRNNCell(layers, state_is_tuple=False)
         outputs, states = tf.nn.dynamic_rnn(cell=multi_layer_cell, inputs=X, sequence_length=seq_length, dtype=tf.float32)
@@ -61,26 +83,26 @@ def discriminator(X, n_outputs, seq_length, reuse=False):
     return logits, y_pred
 
 
-def discriminator_loss_real(logits, y):
-    loss = tf.nn.sparse_softmax_cross_entropy_with_logits(labels=y, logits=logits)
+def discriminator_loss_real(Dx, y):
+    loss = tf.nn.sparse_softmax_cross_entropy_with_logits(labels=y, logits=Dx)
 
     loss = tf.reduce_mean(tf.cast(loss, tf.float32))
 
-    accuracy = tf.reduce_mean(tf.cast(tf.nn.in_top_k(logits, y, 1), tf.float32))
+    accuracy = tf.reduce_mean(tf.cast(tf.nn.in_top_k(Dx, y, 1), tf.float32))
 
     return loss, accuracy
 
 
-def discriminator_loss_fake(batch_size, logits):
+def discriminator_loss_fake(size_batch, Dg):
     # discriminator should ideally not fall for the fakes
 
-    ones = tf.ones(batch_size, tf.int64)
+    ones = tf.ones(size_batch, tf.int64)
 
-    loss = tf.nn.sparse_softmax_cross_entropy_with_logits(labels=ones, logits=logits)
+    loss = tf.nn.sparse_softmax_cross_entropy_with_logits(labels=ones, logits=Dg)
 
     loss = tf.reduce_mean(tf.cast(loss, tf.float32))
 
-    accuracy = tf.reduce_mean(tf.cast(tf.nn.in_top_k(logits, ones, 1), tf.float32))
+    accuracy = tf.reduce_mean(tf.cast(tf.nn.in_top_k(Dg, ones, 1), tf.float32))
 
     return loss, accuracy
 
@@ -95,46 +117,3 @@ def discriminator_trainer_real(learning_rate, loss):
     return trainer
 
 
-def discriminator_trainer_fake(learning_rate, loss):
-    tvars = tf.trainable_variables()
-
-    vars = [var for var in tvars if "t_discriminator" in var.name]
-
-    trainer = tf.train.AdamOptimizer(learning_rate).minimize(loss, var_list=vars)
-
-    return trainer
-
-
-# Train generator and discriminator together
-# for i in range(100000):
-#     real_image_batch = mnist.train.next_batch(batch_size)[0].reshape([batch_size, 28, 28, 1])
-#     z_batch = np.random.normal(0, 1, size=[batch_size, z_dimensions])
-#
-#     # Train discriminator on both real and fake images
-#     _, __, dLossReal, dLossFake = sess.run([d_trainer_real, d_trainer_fake, d_loss_real, d_loss_fake],
-#                                            {x_placeholder: real_image_batch, z_placeholder: z_batch})
-#
-#     # Train generator
-#     z_batch = np.random.normal(0, 1, size=[batch_size, z_dimensions])
-#     _ = sess.run(g_trainer, feed_dict={z_placeholder: z_batch})
-#
-#     if i % 10 == 0:
-#         # Update TensorBoard with summary statistics
-#         z_batch = np.random.normal(0, 1, size=[batch_size, z_dimensions])
-#         summary = sess.run(merged, {z_placeholder: z_batch, x_placeholder: real_image_batch})
-#         writer.add_summary(summary, i)
-#
-#     if i % 100 == 0:
-#         # Every 100 iterations, show a generated image
-#         print("Iteration:", i, "at", datetime.datetime.now())
-#         z_batch = np.random.normal(0, 1, size=[1, z_dimensions])
-#         generated_images = generator(z_placeholder, 1, z_dimensions)
-#         images = sess.run(generated_images, {z_placeholder: z_batch})
-#         plt.imshow(images[0].reshape([28, 28]), cmap='Greys')
-#         plt.show()
-#
-#         # Show discriminator's estimate
-#         im = images[0].reshape([1, 28, 28, 1])
-#         result = discriminator(x_placeholder)
-#         estimate = sess.run(result, {x_placeholder: im})
-#         print("Estimate:", estimate)
