@@ -4,7 +4,7 @@ import random
 import numpy as np
 import pandas as pd
 
-from src.policy import Policy
+from policy import Policy
 
 
 def generate_troubled_life_policy_data(no_of_policies, runtime, file_path):
@@ -77,6 +77,37 @@ def prepare_labels_features_lengths(policy_histories, policy_histories_lengths, 
     features = features.reshape((policy_histories.index.levels[0].shape[0], max_policy_history_length, -1))
 
     return labels, features, seq_lengths
+
+
+def generate_Z_batch(size_batch, max_length_policy_history, n_inputs, runtime):
+    #Z_batch = np.random.normal(10, 1, size=[size_batch, max_length_policy_history, n_inputs])
+    #seq_length_z_batch = np.random.randint(low=1 + runtime * 2, high=max_length_policy_history + 1, size=size_batch)
+    Z_batch = np.full(shape=[size_batch, max_length_policy_history, n_inputs], fill_value=0.0)
+    seq_length_z_batch = np.full(shape=size_batch, fill_value=1 + runtime * 2)
+
+    init_z_batch = np.full(shape=[size_batch, 5], fill_value=0.0)
+    init_z_batch[:, 0] = np.random.uniform(low=1000.0, high=1500.0, size=size_batch)
+    
+    s = np.random.randint(low=1, high=5, size=size_batch)
+    
+    for i in range(size_batch):
+        for j in range(1, 5):
+            init_z_batch[i, j] = (s[i] == j)
+    
+    #init_z_batch[:, 0] = 1250.0
+    #init_z_batch[:, 1] = 0.03
+
+    
+    Z_batch[:, 0, 0] = init_z_batch[:, 0]
+    Z_batch[:, 0, 1] = init_z_batch[:, 1]
+    Z_batch[:, 0, 2] = init_z_batch[:, 2]
+    Z_batch[:, 0, 3] = init_z_batch[:, 3]
+    Z_batch[:, 0, 4] = init_z_batch[:, 4]
+
+    #for i in range(size_batch):
+     #   Z_batch[i, seq_length_z_batch[i]:max_length_policy_history, :] = 0
+    
+    return Z_batch, seq_length_z_batch, init_z_batch
 
 
 class TrainDataSet:
