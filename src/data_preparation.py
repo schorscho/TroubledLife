@@ -88,7 +88,7 @@ def generate_Z_batch(size_batch, max_length_policy_history, n_inputs, runtime):
     init_z_batch = np.full(shape=[size_batch, 5], fill_value=0.0)
     init_z_batch[:, 0] = np.random.uniform(low=1000.0, high=1500.0, size=size_batch)
     
-    s = np.random.randint(low=1, high=5, size=size_batch)
+    s = np.random.randint(low=1, high=2, size=size_batch)
     
     for i in range(size_batch):
         for j in range(1, 5):
@@ -183,3 +183,59 @@ class TrainDataSet:
             end = self._index_in_epoch
 
             return self._labels[start:end], self._features[start:end], self._seq_lengths[start:end]
+
+
+def numpy_correct(init_z, gData):
+    correct = np.full(shape=(size_batch, max_length_policy_history, 2), fill_value=0.0)
+
+    premium = init_z[:, 0]
+    interest = init_z[:, 1] * 0.03 + init_z[:, 2] * 0.04 + init_z[:, 3] * 0.05 + init_z[:, 4] * 0.06
+
+    k1 = premium
+    k1v = k1 * (1 + interest)
+    k2 = premium + k1v
+    k2v = k2 * (1 + interest)
+    k3 = premium + k2v
+    k3v = k3 * (1 + interest)
+    k4 = premium + k3v
+    k4v = k4 * (1 + interest)
+    k5 = premium + k4v
+    k5v = k5 * (1 + interest)
+
+    correct[:, 0, 0] = premium
+    correct[:, 0, 1] = 0.0
+    correct[:, 1, 0] = premium
+    correct[:, 1, 1] = k1
+    correct[:, 2, 0] = premium
+    correct[:, 2, 1] = k1v
+    correct[:, 3, 0] = premium
+    correct[:, 3, 1] = k2
+    correct[:, 4, 0] = premium
+    correct[:, 4, 1] = k2v
+    correct[:, 5, 0] = premium
+    correct[:, 5, 1] = k3
+    correct[:, 6, 0] = premium
+    correct[:, 6, 1] = k3v
+    correct[:, 7, 0] = premium
+    correct[:, 7, 1] = k4
+    correct[:, 8, 0] = premium
+    correct[:, 8, 1] = k4v
+    correct[:, 9, 0] = premium
+    correct[:, 9, 1] = k5
+    correct[:, 10, 0] = premium
+    correct[:, 10, 1] = k5v
+
+    np_loss = (np.fabs(gData[:, 0, 0] - premium) + np.fabs(gData[:, 0, 1]) +
+               np.fabs(gData[:, 1, 0] - premium) + np.fabs(gData[:, 1, 1] - k1) +
+               np.fabs(gData[:, 2, 0] - premium) + np.fabs(gData[:, 2, 1] - k1v) +
+               np.fabs(gData[:, 3, 0] - premium) + np.fabs(gData[:, 3, 1] - k2) +
+               np.fabs(gData[:, 4, 0] - premium) + np.fabs(gData[:, 4, 1] - k2v) +
+               np.fabs(gData[:, 5, 0] - premium) + np.fabs(gData[:, 5, 1] - k3) +
+               np.fabs(gData[:, 6, 0] - premium) + np.fabs(gData[:, 6, 1] - k3v) +
+               np.fabs(gData[:, 7, 0] - premium) + np.fabs(gData[:, 7, 1] - k4) +
+               np.fabs(gData[:, 8, 0] - premium) + np.fabs(gData[:, 8, 1] - k4v) +
+               np.fabs(gData[:, 9, 0] - premium) + np.fabs(gData[:, 9, 1] - k5) +
+               np.fabs(gData[:, 10, 0] - premium) + np.fabs(gData[:, 10, 1] - k5v)
+               )
+
+    return np_loss
