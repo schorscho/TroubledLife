@@ -36,10 +36,10 @@ class Policy:
         self.troubled = False
 
 
-    def add_yearly_interest(self):
+    def add_yearly_interest(self, trouble):
         random.seed()
 
-        if (random.random() < 0.05):
+        if (trouble and random.random() < 0.05):
             self.current_capital += self.current_capital * self.interest * random.uniform(5.0, 10.0)
             self.troubled = True
         else:

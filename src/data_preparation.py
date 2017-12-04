@@ -7,7 +7,7 @@ import pandas as pd
 from policy import Policy
 
 
-def generate_troubled_life_policy_data(no_of_policies, runtime, file_path):
+def generate_life_policy_data(no_of_policies, runtime, trouble, file_path):
     with open(file_path, 'w') as csvfile:
         policies = [Policy(id, 100000 * random.uniform(1.0, 1.5), random.randint(1, 4)) for id in range(1001, 1001 + no_of_policies)]
 
@@ -26,13 +26,13 @@ def generate_troubled_life_policy_data(no_of_policies, runtime, file_path):
                 policy.write_to_csv(csvfile)
 
             for policy in policies:
-                policy.add_yearly_interest()
+                policy.add_yearly_interest(trouble=trouble)
                 policy.write_to_csv(csvfile)
 
             print("generate: ", year)
 
 
-def load_troubled_life_policy_data(file_path):
+def load_life_policy_data(file_path):
     policy_histories = pd.read_csv(filepath_or_buffer=file_path, header=0, index_col=[0, 1, 2])
 
     return policy_histories.sort_index()
@@ -46,7 +46,7 @@ def get_policy_history_lengths(policy_histories):
     return policy_histories_lengths, max_policy_history_length
 
 
-def pad_troubled_life_policy_histories(policy_histories, policy_histories_lengths, max_policy_history_length):
+def pad_life_policy_histories(policy_histories, policy_histories_lengths, max_policy_history_length):
     # Let's zero-padd all policy histories to the maximum number of versions
     for id, policy_history_length in policy_histories_lengths:
         # Append at the end, set id to current group and current_year to 10000+
