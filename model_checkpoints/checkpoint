@@ -1,0 +1,2 @@
+model_checkpoint_path: "/home/ubuntu/TroubledLife/model_checkpoints/rnn_enc_dec.ckpt"
+all_model_checkpoint_paths: "/home/ubuntu/TroubledLife/model_checkpoints/rnn_enc_dec.ckpt"
