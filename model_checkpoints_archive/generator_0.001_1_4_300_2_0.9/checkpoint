@@ -1,2 +1,0 @@
-model_checkpoint_path: "/home/ubuntu/TroubledLife/model_checkpoints/generator.ckpt"
-all_model_checkpoint_paths: "/home/ubuntu/TroubledLife/model_checkpoints/generator.ckpt"

@@ -239,3 +239,5 @@ def numpy_correct(init_z, gData):
                )
 
     return np_loss
+
+
